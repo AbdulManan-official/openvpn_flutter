@@ -26,12 +26,9 @@ public class OpenVPNFlutterPlugin implements FlutterPlugin, ActivityAware {
 
     private MethodChannel vpnControlMethod;
     private EventChannel vpnStageEvent;
-    //    private EventChannel vpnStatusEvent;
     private EventChannel.EventSink vpnStageSink;
-//    private EventChannel.EventSink vpnStatusSink;
 
     private static final String EVENT_CHANNEL_VPN_STAGE = "id.laskarmedia.openvpn_flutter/vpnstage";
-    //    private static final String EVENT_CHANNEL_VPN_STATUS = "id.laskarmedia.openvpn_flutter/vpnstatus";
     private static final String METHOD_CHANNEL_VPN_CONTROL = "id.laskarmedia.openvpn_flutter/vpncontrol";
 
     private static String config = "", username = "", password = "", name = "";
@@ -43,10 +40,20 @@ public class OpenVPNFlutterPlugin implements FlutterPlugin, ActivityAware {
 
     Context mContext;
 
-
+    // ── Called when user taps Connect and Android shows "Allow VPN?" dialog ──
+    // Pass false to block the connect even if permission was granted.
     public static void connectWhileGranted(boolean granted) {
         if (granted) {
             vpnHelper.startVPN(config, username, password, name, bypassPackages);
+        }
+    }
+
+    // ── NEW: direct stop — called from NativeVpnManager / SessionExpireWorker ──
+    // Uses the same vpnHelper.stopVPN() path that the "disconnect" method call uses.
+    // No reflection needed. Works from any context (Service, Worker, Activity).
+    public static void forceStopVpn() {
+        if (vpnHelper != null) {
+            vpnHelper.stopVPN();
         }
     }
 
@@ -151,14 +158,11 @@ public class OpenVPNFlutterPlugin implements FlutterPlugin, ActivityAware {
         if (vpnStageSink != null) vpnStageSink.success(stage.toLowerCase());
     }
 
-
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         vpnStageEvent.setStreamHandler(null);
         vpnControlMethod.setMethodCallHandler(null);
-//        vpnStatusEvent.setStreamHandler(null);
     }
-
 
     private String updateVPNStages() {
         if (OpenVPNService.getStatus() == null) {
